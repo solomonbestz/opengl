@@ -1,6 +1,8 @@
 import pygame as pg
 from OpenGL.GL import *
 import numpy as np
+import ctypes
+from OpenGL.GL.shaders import compileProgram, compileShader
 
 
 class App:
@@ -13,7 +15,26 @@ class App:
 
         # Initialize Opengl
         glClearColor(1, 0.2, 0.2, 1)
+        self.shader = self.create_shader('shaders/vertex.txt', 'shaders/fragment.txt')
+        glUseProgram(self.shader)
+        self.triangle = Triangle()
         self.mainloop()
+
+    def create_shader(self, vertex_filepath,  fragment_filepath):
+
+        with open(vertex_filepath, 'r') as f:
+            vertex_src = f.readlines()
+
+        with open(fragment_filepath, 'r') as f:
+            fragment_src = f.readlines()
+
+        shader = compileProgram(
+            compileShader(vertex_src, GL_VERTEX_SHADER),
+            compileShader(fragment_src, GL_FRAGMENT_SHADER)
+        )
+
+        return shader
+
 
     def mainloop(self):
         running: bool = True
@@ -25,6 +46,10 @@ class App:
 
             # refresh screen
             glClear(GL_COLOR_BUFFER_BIT)
+
+            glUseProgram(self.shader)
+            glBindVertexArray(self.triangle.vao)
+            glDrawArrays(GL_TRIANGLES, 0, self.triangle.vertex_count)
             pg.display.flip()
 
             # timer
@@ -32,7 +57,9 @@ class App:
         self.quit()
 
     def quit(self):
-        pg.quit( )      
+        self.triangle.destroy()
+        glDeleteProgram(self.shader)
+        pg.quit()      
 
 
 class Triangle:
@@ -46,7 +73,8 @@ class Triangle:
         
         self.vertices = np.array(self.vertices, dtype=np.float32)
 
-        self.vertices = 3
+        self.vertex_count = 3
+
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
         self.vbo = glGenBuffers(1)
